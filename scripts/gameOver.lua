@@ -3,15 +3,15 @@ local gameOver = {}
 local config = require "scripts.config"
 
 -- Draw the Game Over scene.
--- This version draws the Game Over and Restart images side by side with new scale factors,
--- updates the restart clickable area, and draws the total score in an enlarged font with a rounded-outlined box.
+-- This function draws the Game Over and Restart images side by side using new scale factors,
+-- recalculates the clickable area for Restart, and displays the total score in a larger font with a rounded outline.
 function gameOver.draw(windowWidth, windowHeight, gameOverImage, cardFont, totalScore, startOverButton, sceneAlpha, bobTime, restartImage)
   love.graphics.setColor(1, 1, 1, sceneAlpha)
   
-  -- New scale factors as requested:
-  local gameOverScale = 0.25   -- Game Over image reduced by 50% (from 50% scale)
-  local restartScale = 0.15    -- Restart image reduced by 70% (from 50% scale)
-  local marginBetween = 50     -- Horizontal margin between images
+  -- New scale factors:
+  local gameOverScale = 0.25   -- Game Over image reduced by 50% (from a base 50% scale)
+  local restartScale = 0.15    -- Restart image reduced by 70% (from a base 50% scale)
+  local marginBetween = 50     -- Horizontal margin between the images
   
   local goW = gameOverImage:getWidth() * gameOverScale
   local goH = gameOverImage:getHeight() * gameOverScale
@@ -22,21 +22,21 @@ function gameOver.draw(windowWidth, windowHeight, gameOverImage, cardFont, total
   local startX = (windowWidth - totalImagesWidth) / 2
   local imageY = windowHeight / 2 - math.max(goH, rsH) / 2
   
-  -- Draw Game Over image on the left
+  -- Draw the Game Over image on the left.
   love.graphics.draw(gameOverImage, startX, imageY, 0, gameOverScale, gameOverScale)
   
-  -- Draw Restart image on the right
+  -- Draw the Restart image on the right.
   local restartX = startX + goW + marginBetween
   local restartY = imageY
   love.graphics.draw(restartImage, restartX, restartY, 0, restartScale, restartScale)
   
-  -- Update the restart clickable area to match the drawn image
+  -- Update the restart clickable area to match the drawn image.
   startOverButton.x = restartX
   startOverButton.y = restartY
   startOverButton.width = rsW
   startOverButton.height = rsH
   
-  -- Increase the total score font size and draw it in a box with rounded corners.
+  -- Increase the total score font size and draw it with a rounded outline.
   local totalScoreFont = love.graphics.newFont(48)
   love.graphics.setFont(totalScoreFont)
   local scoreText = "Total Score: " .. totalScore
@@ -48,16 +48,12 @@ function gameOver.draw(windowWidth, windowHeight, gameOverImage, cardFont, total
   local boxX = (windowWidth - boxWidth) / 2
   local boxY = imageY + math.max(goH, rsH) + 30
   
-  -- Draw a rounded rectangle outline behind the text.
   love.graphics.setLineWidth(3)
-  love.graphics.setLineJoin("bevel")  -- Use "bevel" instead of "round"
+  love.graphics.setLineJoin("bevel")
   love.graphics.rectangle("line", boxX, boxY, boxWidth, boxHeight, 8, 8)
-  
-  -- Draw the total score text centered within the box.
   love.graphics.print(scoreText, boxX + padding, boxY + padding)
   
   love.graphics.setColor(1, 1, 1, 1)
-  -- Restore the original font for further drawing if needed.
   love.graphics.setFont(cardFont)
 end
 

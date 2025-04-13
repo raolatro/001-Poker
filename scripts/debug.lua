@@ -5,7 +5,7 @@ local config = require "scripts.config"
 -- Store alerts as a table of { timestamp, text }
 local alerts = {}
 
--- Add a new debug alert; each alert lasts 10 seconds.
+-- Add a new debug alert; each alert lasts 20 seconds.
 function debugModule.addAlert(text)
   table.insert(alerts, { timestamp = love.timer.getTime(), text = text })
 end
@@ -21,7 +21,7 @@ function debugModule.draw()
   local y = 10
   for i = #alerts, 1, -1 do
     local alert = alerts[i]
-    if currentTime - alert.timestamp > 10 then
+    if currentTime - alert.timestamp > 20 then
       table.remove(alerts, i)
     else
       love.graphics.print(alert.text, 10, y)
