@@ -1,0 +1,14 @@
+handType,score
+Flush House, 300, 1
+Flush Five, 250, 1
+Five of a Kind, 200, 1
+Royal Straight Flush,100, 1
+Straight Flush,90, 1
+Four of a Kind,80, 1
+Full House,70, 1
+Flush,60, 1
+Straight,50, 1
+Three of a Kind,40, 1
+Two Pair,30, 1
+Pair,20, 1
+High Card,10, 1

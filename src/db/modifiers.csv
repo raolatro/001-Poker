@@ -1,0 +1,4 @@
+filename,type,action,rarity
+card_joker_red.png,Joker,AddRed,common
+card_joker_black.png,Joker,AddBlack,common
+card_blank.png,Modifier,Remove,common
