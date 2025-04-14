@@ -6,7 +6,7 @@ local config = require "scripts.config"
 local debugModule = require "scripts.debug"
 local MAX_DISPLAYED = 8  -- max cards displayed on table
 
-local movingCards = {}  -- cards being animated
+local movingCards = {}  -- cards being animated (play/discard)
 
 handManager.animationPhase = nil
 handManager.animationTimer = 0
@@ -18,9 +18,10 @@ handManager.handsRemaining = 3
 handManager.handProcessed = false
 
 local function easeInOutQuad(t)
-  if t < 0.5 then return 2*t*t else return -1+(4-2*t)*t end
+  if t < 0.5 then return 2 * t * t else return -1 + (4 - 2 * t) * t end
 end
 
+-- Toggle selection for a card.
 function handManager.toggleCard(card, tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth)
   debugModule.addAlert("toggleCard called for card rank: " .. tostring(card.rank) .. "\n\n----------")
   if card.selected then
@@ -35,7 +36,8 @@ function handManager.toggleCard(card, tableStartY, cardWidth, cardHeight, cardSp
   cardManager.updatePositions(tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth)
 end
 
-function handManager.playHand(tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth, windowHeight)
+-- Play hand: animate selected cards from current position to center with a spin.
+function handManager.playHand(tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth, windowHeight, deckRect)
   if handManager.animationPhase or handManager.handProcessed then 
     debugModule.addAlert("playHand aborted: animation in progress or hand already processed\n\n----------")
     return false
@@ -75,6 +77,7 @@ function handManager.playHand(tableStartY, cardWidth, cardHeight, cardSpacing, w
   return true
 end
 
+-- Discard hand: animate discard for selected cards.
 function handManager.discardHand(tableStartY, cardWidth, cardHeight, windowHeight, windowWidth)
   if handManager.animationPhase then
     debugModule.addAlert("Discard aborted: animation in progress\n\n----------")
@@ -101,6 +104,30 @@ function handManager.discardHand(tableStartY, cardWidth, cardHeight, windowHeigh
   return false
 end
 
+-- Sorting function: rearrange cards by rank or suit.
+function handManager.sortCards(criteria, windowWidth, cardWidth, cardSpacing)
+  local cards = cardManager.getTableCards()
+  if criteria == "rank" then
+    table.sort(cards, function(a, b) return a.rank < b.rank end)
+  elseif criteria == "suit" then
+    table.sort(cards, function(a, b) return a.suit < b.suit end)
+  end
+  local totalWidth = #cards * cardWidth + (#cards - 1) * cardSpacing
+  local startX = (windowWidth - totalWidth) / 2
+  for i, card in ipairs(cards) do
+    card.sortAnimDelay = (i - 1) * 0.05
+    card.sortAnimTimer = 0
+    card.sortStartX = card.x
+    card.sortTargetX = startX + (i - 1) * (cardWidth + cardSpacing)
+    card.sortAnimating = true
+    local dsfx = love.audio.newSource(config.CARD_DISCARD_SFX, "static")
+    dsfx:setVolume(config.SFX_VOLUME)
+    dsfx:play()
+    debugModule.addAlert("Sorting card (" .. card.rank .. ") with delay: " .. card.sortAnimDelay)
+  end
+end
+
+-- Update animations (for play/discard/sort)
 function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, tableStartY, cardSpacing)
   if handManager.animationPhase == "move_to_center" then
     handManager.animationTimer = handManager.animationTimer + dt
@@ -112,6 +139,7 @@ function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, 
           local eased = easeInOutQuad(localT)
           card.x = card.startX + (card.targetX - card.startX) * eased
           card.y = card.startY + (card.targetY - card.startY) * eased
+          card.rotation = card.startRotation + (card.drawTargetRotation - card.startRotation) * eased
         end
       end
     end
@@ -150,17 +178,13 @@ function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, 
       else
         allDone = false
       end
-      if card.slideTimer < card.slideDelay + 0.5 then
-        allDone = false
-      end
+      if card.slideTimer < card.slideDelay + 0.5 then allDone = false end
     end
     if allDone then
       local tCards = cardManager.getTableCards()
       for i = #tCards, 1, -1 do
         for _, mcard in ipairs(movingCards) do
-          if tCards[i] == mcard then
-            table.remove(tCards, i)
-          end
+          if tCards[i] == mcard then table.remove(tCards, i) end
         end
       end
       movingCards = {}
@@ -207,9 +231,7 @@ function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, 
             dsfx:play()
             card.discardPlayed = true
           end
-          if localT < 1 then
-            allDiscarded = false
-          end
+          if localT < 1 then allDiscarded = false end
         else
           allDiscarded = false
         end
@@ -232,11 +254,49 @@ function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, 
       handManager.handProcessed = false
     end
   end
+  
+  -- Update sorting animations (if any)
+  for _, card in ipairs(cardManager.getTableCards()) do
+    if card.sortAnimating then
+      card.sortAnimTimer = card.sortAnimTimer + dt
+      if card.sortAnimTimer >= card.sortAnimDelay then
+        local t = math.min((card.sortAnimTimer - card.sortAnimDelay) / 0.5, 1)
+        local eased = easeInOutQuad(t)
+        card.x = card.sortStartX + (card.sortTargetX - card.sortStartX) * eased
+        if t >= 1 then
+          card.sortAnimating = false
+        end
+      end
+    end
+  end
+end
+
+function handManager.sortCards(criteria, windowWidth, cardWidth, cardSpacing)
+  local cards = cardManager.getTableCards()
+  if criteria == "rank" then
+    table.sort(cards, function(a, b) return a.rank < b.rank end)
+  elseif criteria == "suit" then
+    table.sort(cards, function(a, b) return a.suit < b.suit end)
+  end
+  local totalWidth = #cards * cardWidth + (#cards - 1) * cardSpacing
+  local startX = (windowWidth - totalWidth) / 2
+  for i, card in ipairs(cards) do
+    card.sortAnimDelay = (i - 1) * 0.05
+    card.sortAnimTimer = 0
+    card.sortStartX = card.x
+    card.sortTargetX = startX + (i - 1) * (cardWidth + cardSpacing)
+    card.sortAnimating = true
+    local dsfx = love.audio.newSource(config.CARD_DISCARD_SFX, "static")
+    dsfx:setVolume(config.SFX_VOLUME)
+    dsfx:play()
+    debugModule.addAlert("Sorting card (" .. card.rank .. ") with delay: " .. card.sortAnimDelay)
+  end
 end
 
 handManager.toggleCard = handManager.toggleCard
 handManager.playHand = handManager.playHand
 handManager.discardHand = handManager.discardHand
 handManager.updateAnimations = handManager.updateAnimations
+handManager.sortCards = handManager.sortCards
 
 return handManager

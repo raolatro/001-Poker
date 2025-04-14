@@ -49,7 +49,8 @@ function cardManager.shuffleDeck()
   end
 end
 
-function cardManager.dealCards(n, tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth)
+function cardManager.dealCards(n, tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth, deckRect)
+  n = tonumber(n) or 0
   local startIndex = #tableCards + 1
   for i = 1, n do
     if #deck > 0 then
@@ -58,20 +59,27 @@ function cardManager.dealCards(n, tableStartY, cardWidth, cardHeight, cardSpacin
       card.isAnimating = false
       card.discardDelay = nil
       card.discardStartY = nil
+      -- For draw animation:
       card.newlyDrawn = true
       card.drawAnimTimer = 0
-      card.drawAnimDuration = 0.3
-      card.drawAnimDelay = (startIndex + i - 1 - 1) * 0.05
+      card.drawAnimDuration = 0.5  -- increased duration for a smoother animation
+      card.drawAnimDelay = (i - 1) * 0.09   -- 0.09-second stagger delay
       card.drawPlayed = false
+      card.startDrawX = deckRect.x
+      card.startDrawY = deckRect.y
+      card.startRotation = math.pi       -- 180º start rotation
+      card.drawTargetRotation = 0
+      card.rotation = card.startRotation
       table.insert(tableCards, card)
     end
   end
   cardManager.updatePositions(tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth)
+  -- For newly drawn cards, preserve their target positions but do not overwrite their current (animated) position.
   for i, card in ipairs(tableCards) do
     if card.newlyDrawn then
       card.drawTargetX = card.x
-      card.startDrawX = card.drawTargetX - 50
-      card.x = card.startDrawX
+      card.drawTargetY = card.y
+      -- Leave card.x and card.y as set from the deck (startDrawX,startDrawY)
     end
   end
 end
@@ -81,17 +89,22 @@ function cardManager.updatePositions(tableStartY, cardWidth, cardHeight, cardSpa
   local totalWidth = n * cardWidth + (n - 1) * cardSpacing
   local startX = (windowWidth - totalWidth) / 2
   for i, card in ipairs(tableCards) do
-    if not card.isAnimating and not card.discardDelay then
-      card.x = startX + (i - 1) * (cardWidth + cardSpacing)
-      card.baseY = tableStartY
-      if card.selected then
-        card.y = card.baseY - 20
-      else
-        card.y = card.baseY
-      end
-      card.width = cardWidth
-      card.height = cardHeight
+    local posX = startX + (i - 1) * (cardWidth + cardSpacing)
+    local posY = tableStartY
+    if card.newlyDrawn then
+      card.drawTargetX = posX
+      card.drawTargetY = posY
+      -- Do NOT modify card.x, so the draw animation continues.
+    else
+      card.x = posX
+      card.y = posY
     end
+    card.baseY = posY
+    if card.selected and not card.newlyDrawn then
+      card.y = posY - 20
+    end
+    card.width = cardWidth
+    card.height = cardHeight
   end
 end
 

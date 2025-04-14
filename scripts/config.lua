@@ -2,7 +2,7 @@
 local config = {}
 
 -- Global settings
-config.DEBUG_MODE = false
+config.DEBUG_MODE = true
 
 -- Window dimensions
 config.WINDOW_WIDTH = 1920
