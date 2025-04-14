@@ -1,6 +1,7 @@
 -- evaluateHand.lua
 local evaluateHand = {}
 local config = require "scripts.config"
+local debugModule = require "scripts.debug"
 
 local pointsData = {}
 
@@ -11,12 +12,22 @@ end
 function evaluateHand.loadPoints()
   pointsData = {}
   local data = love.filesystem.read(config.POINTS_CSV)
+  local isHeader = true
   for line in data:gmatch("[^\r\n]+") do
-    local hand, scoreStr = line:match("([^,]+),(.+)")
-    if hand and scoreStr then
-      hand = trim(hand)
-      scoreStr = trim(scoreStr)
-      pointsData[hand] = tonumber(scoreStr)
+    if isHeader then
+      isHeader = false
+      debugModule.addAlert("Skipping header in points CSV.")
+    else
+      local hand, scoreStr, levelStr = line:match("([^,]+),([^,]+),(.+)")
+      if hand and scoreStr then
+        hand = trim(hand)
+        scoreStr = trim(scoreStr)
+        -- levelStr is loaded but not used for now; later you can extend this.
+        pointsData[hand] = tonumber(scoreStr)
+        debugModule.addAlert("Loaded points for hand: " .. hand .. " = " .. tostring(pointsData[hand]))
+      else
+        debugModule.addAlert("Failed to parse line: " .. line)
+      end
     end
   end
 end
@@ -34,7 +45,7 @@ function evaluateHand.evaluate(cards)
     table.insert(counts, cnt)
   end
   table.sort(counts, function(a, b) return a > b end)
-
+  
   if count == 5 then
     local flush = true
     local firstSuit = cards[1].suit
@@ -93,8 +104,9 @@ function evaluateHand.evaluate(cards)
       handType = "High Card"
     end
   end
-
+  
   score = pointsData[handType] or 0
+  debugModule.addAlert("Hand evaluated as: " .. handType .. " with score: " .. tostring(score))
   return handType .. " (" .. score .. " points)", score
 end
 
