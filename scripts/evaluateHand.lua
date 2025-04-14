@@ -4,7 +4,6 @@ local config = require "scripts.config"
 
 local pointsData = {}
 
--- Helper: trim whitespace
 local function trim(s)
   return s:match("^%s*(.-)%s*$")
 end
@@ -35,7 +34,7 @@ function evaluateHand.evaluate(cards)
     table.insert(counts, cnt)
   end
   table.sort(counts, function(a, b) return a > b end)
-  
+
   if count == 5 then
     local flush = true
     local firstSuit = cards[1].suit
@@ -53,7 +52,7 @@ function evaluateHand.evaluate(cards)
     table.sort(vals)
     local straight = true
     for i = 2, #vals do
-      if vals[i] ~= vals[i - 1] + 1 then
+      if vals[i] ~= vals[i-1] + 1 then
         straight = false
         break
       end
@@ -94,6 +93,7 @@ function evaluateHand.evaluate(cards)
       handType = "High Card"
     end
   end
+
   score = pointsData[handType] or 0
   return handType .. " (" .. score .. " points)", score
 end

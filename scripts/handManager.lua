@@ -4,10 +4,10 @@ local cardManager = require "scripts.cardManager"
 local evaluateHandModule = require "scripts.evaluateHand"
 local config = require "scripts.config"
 local debugModule = require "scripts.debug"
-local MAX_DISPLAYED = 7  -- Add this line to define the constant
+local MAX_DISPLAYED = 8  -- max cards displayed on table
 
--- Local state for hand animations (these variables will be managed by handManager)
-local movingCards = {}  -- currently animated cards
+local movingCards = {}  -- cards being animated
+
 handManager.animationPhase = nil
 handManager.animationTimer = 0
 handManager.handAlpha = 0
@@ -17,16 +17,10 @@ handManager.totalScore = 0
 handManager.handsRemaining = 3
 handManager.handProcessed = false
 
--- Local helper: Easing function
 local function easeInOutQuad(t)
-  if t < 0.5 then
-    return 2 * t * t
-  else
-    return -1 + (4 - 2 * t) * t
-  end
+  if t < 0.5 then return 2*t*t else return -1+(4-2*t)*t end
 end
 
--- Toggle a card's selection.
 function handManager.toggleCard(card, tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth)
   debugModule.addAlert("toggleCard called for card rank: " .. tostring(card.rank) .. "\n\n----------")
   if card.selected then
@@ -34,18 +28,13 @@ function handManager.toggleCard(card, tableStartY, cardWidth, cardHeight, cardSp
   else
     local count = 0
     for _, c in ipairs(cardManager.getTableCards()) do
-      if c.selected then
-        count = count + 1
-      end
+      if c.selected then count = count + 1 end
     end
-    if count < 5 then
-      card.selected = true
-    end
+    if count < 5 then card.selected = true end
   end
   cardManager.updatePositions(tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth)
 end
 
--- Play hand: animate selected cards and evaluate the hand.
 function handManager.playHand(tableStartY, cardWidth, cardHeight, cardSpacing, windowWidth, windowHeight)
   if handManager.animationPhase or handManager.handProcessed then 
     debugModule.addAlert("playHand aborted: animation in progress or hand already processed\n\n----------")
@@ -86,7 +75,6 @@ function handManager.playHand(tableStartY, cardWidth, cardHeight, cardSpacing, w
   return true
 end
 
--- Discard hand: animate discard for selected cards.
 function handManager.discardHand(tableStartY, cardWidth, cardHeight, windowHeight, windowWidth)
   if handManager.animationPhase then
     debugModule.addAlert("Discard aborted: animation in progress\n\n----------")
@@ -94,9 +82,7 @@ function handManager.discardHand(tableStartY, cardWidth, cardHeight, windowHeigh
   end
   local discardCount = 0
   for _, card in ipairs(cardManager.getTableCards()) do
-    if card.selected then
-      discardCount = discardCount + 1
-    end
+    if card.selected then discardCount = discardCount + 1 end
   end
   if discardCount > 0 then
     handManager.animationPhase = "discard"
@@ -115,8 +101,6 @@ function handManager.discardHand(tableStartY, cardWidth, cardHeight, windowHeigh
   return false
 end
 
--- Update hand animations (for play hand and discard) called from main.lua's update(dt).
--- Expects dt and several layout parameters.
 function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, tableStartY, cardSpacing)
   if handManager.animationPhase == "move_to_center" then
     handManager.animationTimer = handManager.animationTimer + dt
@@ -151,7 +135,7 @@ function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, 
       handManager.animationPhase = "slide_off"
       handManager.animationTimer = 0
       for i, card in ipairs(movingCards) do
-        card.slideDelay = (i - 1) * 0.05  -- 0.05 sec delay between each card's slide
+        card.slideDelay = (i - 1) * 0.05
         card.slideTimer = 0
       end
     end
@@ -205,7 +189,8 @@ function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, 
       handManager.animationPhase = "game_over"
       handManager.animationTimer = 0
       handManager.fadeAlpha = 1
-      _G.gameOver = true  -- Added this line to indicate game over
+      _G.gameOver = true
+      debugModule.addAlert("Game Over reached\n\n----------")
     end
   elseif handManager.animationPhase == "discard" then
     handManager.animationTimer = handManager.animationTimer + dt
@@ -249,7 +234,6 @@ function handManager.updateAnimations(dt, windowWidth, windowHeight, cardWidth, 
   end
 end
 
--- Expose functions
 handManager.toggleCard = handManager.toggleCard
 handManager.playHand = handManager.playHand
 handManager.discardHand = handManager.discardHand
